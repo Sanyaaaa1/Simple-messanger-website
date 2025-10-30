@@ -29,14 +29,17 @@ It demonstrates key web development concepts, including user authentication, rea
 ## ⚙️ Setup Instructions
 
 1. **Clone the repository and install dependencies:**
+
 `git clone https://github.com/<yourusername>/2kai.git
 cd 2kai
 npm install`
 
 2. **Start the server:**
+
 `npm start`
 
 3. **Open it in your browser (! it is local !)**
+
 `http://localhost:3000`
 
 ## ⚠️ Important Notes 
@@ -49,10 +52,10 @@ npm install`
 
 - Designed to illustrate core programming concepts:
 
--     Frontend-backend communication via HTTP
+-Frontend-backend communication via HTTP
 
--     Asynchronous requests with fetch()
+- Asynchronous requests with fetch()
 
--     File-based persistence
+- File-based persistence
 
--     Responsive UI design and DOM manipulation
+- Responsive UI design and DOM manipulation
