@@ -1,0 +1,598 @@
+<!doctype html>
+<html>
+  <head>
+    <title>2kai</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <!-- LOGIN -->
+    <div id="loginDiv">
+      <h3>Login</h3>
+      <input type="text" id="loginUsername" placeholder="Username" />
+      <input type="password" id="loginPassword" placeholder="Password" />
+      <button id="loginBtn">Login</button>
+      <p id="loginError" style="color: red"></p>
+      <p>Don't have an account?</p>
+      <button id="showRegister" class="switchBtn">Register</button>
+    </div>
+
+    <!-- REGISTER -->
+    <div id="registerDiv" style="display: none">
+      <h3>Register</h3>
+      <input type="text" id="regUsername" placeholder="Username" />
+      <input type="password" id="regPassword" placeholder="Password" />
+      <button id="registerBtn">Register</button>
+      <p id="regError" style="color: red"></p>
+      <p>Already have an account?</p>
+      <button id="showLogin" class="switchBtn">Login</button>
+    </div>
+
+    <!-- CHAT -->
+    <div id="chatContainer" style="display: none">
+      <!-- Mobile chat list toggle -->
+      <div
+        id="mobileChatListToggle"
+        style="
+          display: none;
+          padding: 10px;
+          background: #202225;
+          text-align: center;
+        "
+      >
+        <button id="toggleChatListBtn">Show Chats</button>
+      </div>
+
+      <div id="chatListContainer">
+        <div id="chatHeaderChats"><h3>Chats</h3></div>
+        <input type="text" id="searchUser" placeholder="Search users" />
+        <div id="searchResults"></div>
+        <div id="chatList"></div>
+      </div>
+
+      <div id="chatBoxContainer">
+        <div id="chatHeader">
+          <button id="backToChatsBtn" style="display: none; margin-right: 10px">
+            ← Back
+          </button>
+          <h3 id="currentChatName">Select a chat</h3>
+        </div>
+        <div id="chatBox"></div>
+        <div id="messageInputContainer">
+          <input type="text" id="messageInput" placeholder="Type a message" />
+          <button id="sendBtn">Send</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notification Popup -->
+    <div
+      id="notification"
+      style="
+        display: none;
+        position: fixed;
+        top: 30px;
+        right: 30px;
+        background: #5865f2;
+        color: white;
+        padding: 16px 24px;
+        border-radius: 8px;
+        font-weight: bold;
+        z-index: 9999;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        transition: opacity 0.5s;
+        opacity: 0;
+      "
+    ></div>
+
+    <script>
+      let currentUser = "";
+      let currentChatUser = "";
+      let currentMessages = [];
+      let isMobileView = false;
+      let mobilePanel = "chatBox"; // 'chatList' or 'chatBox'
+      let manualChatSelection = false;
+
+      // ===== Detect mobile device =====
+      function checkMobile() {
+        isMobileView = window.innerWidth <= 768;
+        updateMobileLayout();
+      }
+
+      // ===== Update layout for mobile =====
+      function updateMobileLayout() {
+        const chatListContainer = document.getElementById("chatListContainer");
+        const chatBoxContainer = document.getElementById("chatBoxContainer");
+        const mobileToggle = document.getElementById("mobileChatListToggle");
+        const backButton = document.getElementById("backToChatsBtn");
+        const toggleButton = document.getElementById("toggleChatListBtn");
+
+        if (isMobileView) {
+          mobileToggle.style.display = "block";
+          backButton.style.display = "inline-block";
+          if (mobilePanel === "chatList") {
+            chatListContainer.style.display = "block";
+            chatBoxContainer.style.display = "none";
+            toggleButton.textContent = "Hide Chats";
+          } else {
+            chatListContainer.style.display = "none";
+            chatBoxContainer.style.display = "block";
+            toggleButton.textContent = "Show Chats";
+          }
+        } else {
+          mobileToggle.style.display = "none";
+          backButton.style.display = "none";
+          chatListContainer.style.display = "block";
+          chatBoxContainer.style.display = "block";
+        }
+      }
+
+      // ===== Mobile navigation =====
+      document.getElementById("toggleChatListBtn").onclick = function () {
+        if (isMobileView) {
+          mobilePanel = mobilePanel === "chatList" ? "chatBox" : "chatList";
+          updateMobileLayout();
+        }
+      };
+
+      document.getElementById("backToChatsBtn").onclick = function () {
+        if (isMobileView) {
+          mobilePanel = "chatList";
+          updateMobileLayout();
+        }
+      };
+
+      // ===== Switch login/register =====
+      const loginDiv = document.getElementById("loginDiv");
+      const registerDiv = document.getElementById("registerDiv");
+      const chatContainer = document.getElementById("chatContainer");
+      document.getElementById("showRegister").onclick = () => {
+        loginDiv.style.display = "none";
+        registerDiv.style.display = "block";
+      };
+      document.getElementById("showLogin").onclick = () => {
+        registerDiv.style.display = "none";
+        loginDiv.style.display = "block";
+      };
+
+      // ===== Login =====
+      const loginBtn = document.getElementById("loginBtn");
+      const loginUsername = document.getElementById("loginUsername");
+      const loginPassword = document.getElementById("loginPassword");
+      const loginError = document.getElementById("loginError");
+
+      loginBtn.onclick = async () => {
+        const res = await fetch("/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username: loginUsername.value,
+            password: loginPassword.value,
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          currentUser = loginUsername.value;
+          loginDiv.style.display = "none";
+          chatContainer.style.display = "flex";
+          checkMobile(); // Check screen size after login
+          manualChatSelection = false;
+          loadMyChats(true); // Only auto-select on login
+        } else loginError.textContent = data.message;
+      };
+
+      // ===== Register =====
+      const registerBtn = document.getElementById("registerBtn");
+      const regUsername = document.getElementById("regUsername");
+      const regPassword = document.getElementById("regPassword");
+      const regError = document.getElementById("regError");
+
+      registerBtn.onclick = async () => {
+        const res = await fetch("/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username: regUsername.value,
+            password: regPassword.value,
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          regError.style.color = "green";
+          regError.textContent = "Registered! You can login now.";
+        } else {
+          regError.style.color = "red";
+          regError.textContent = data.message;
+        }
+      };
+
+      // ===== Chat functionality =====
+      const chatList = document.getElementById("chatList");
+      const chatBox = document.getElementById("chatBox");
+      const sendBtn = document.getElementById("sendBtn");
+      const messageInput = document.getElementById("messageInput");
+
+      // Helper: generate chat ID
+      function getChatId(user1, user2) {
+        return [user1, user2].sort().join("_");
+      }
+
+      // Helper: get unread count for a chat (using timestamp)
+      function getUnreadCount(friend, messages) {
+        const chatId = getChatId(currentUser, friend);
+        const lastSeenTs = Number(
+          localStorage.getItem("lastSeenTs_" + chatId) || 0
+        );
+        return messages.filter(
+          (m) =>
+            m.from !== currentUser && Number(new Date(m.timestamp)) > lastSeenTs
+        ).length;
+      }
+
+      // Helper: mark chat as read (using timestamp)
+      function markChatRead(friend, messages) {
+        const chatId = getChatId(currentUser, friend);
+        const chatBox = document.getElementById("chatBox");
+        if (
+          chatBox &&
+          Math.abs(
+            chatBox.scrollHeight - chatBox.scrollTop - chatBox.clientHeight
+          ) < 2
+        ) {
+          const lastMsg = messages[messages.length - 1];
+          const lastTs = lastMsg ? Number(new Date(lastMsg.timestamp)) : 0;
+          localStorage.setItem("lastSeenTs_" + chatId, lastTs);
+          // Update chat list unread badge immediately after marking as read
+          if (currentUser) loadMyChats(false);
+        }
+      }
+
+      // Add chat if not exists
+      function addChat(friend) {
+        const existingChats = [...chatList.children];
+        const chatExists = existingChats.some((c) => c.textContent === friend);
+
+        if (chatExists) return;
+
+        const chatDiv = document.createElement("div");
+        chatDiv.className = "chat";
+        chatDiv.textContent = friend;
+        chatDiv.onclick = () => loadMessages(friend);
+        chatList.appendChild(chatDiv);
+      }
+
+      // ===== Load last chats automatically =====
+      async function loadMyChats(autoSelect = false) {
+        try {
+          const res = await fetch(
+            `/mychats?username=${encodeURIComponent(currentUser)}`
+          );
+          if (!res.ok) throw new Error("Failed to load chats");
+          const data = await res.json();
+          let chats = [];
+          // Always treat chats as array of usernames (strings)
+          if (Array.isArray(data)) {
+            chats = data.filter((c) => typeof c === "string");
+          } else if (data.chats && Array.isArray(data.chats)) {
+            chats = data.chats.filter((c) => typeof c === "string");
+          } else if (data.success && data.chats) {
+            chats = data.chats.filter((c) => typeof c === "string");
+          }
+          // Build new chat list data
+          let newChatList = [];
+          for (const friend of chats) {
+            if (friend === currentUser) continue;
+            const resMsg = await fetch(
+              `/messages?user1=${encodeURIComponent(currentUser)}&user2=${encodeURIComponent(friend)}`
+            );
+            const messages = await resMsg.json();
+            const unread = getUnreadCount(friend, messages);
+            newChatList.push({ friend, unread });
+          }
+          // Compare with current chat list
+          let changed = false;
+          const currentChats = Array.from(chatList.children).map((c) => {
+            return {
+              friend: c.getAttribute("data-username"),
+              unread: c.querySelector(".unreadBadge")
+                ? Number(c.querySelector(".unreadBadge").textContent)
+                : 0,
+            };
+          });
+          if (newChatList.length !== currentChats.length) changed = true;
+          else {
+            for (let i = 0; i < newChatList.length; i++) {
+              if (
+                newChatList[i].friend !== currentChats[i].friend ||
+                newChatList[i].unread !== currentChats[i].unread
+              ) {
+                changed = true;
+                break;
+              }
+            }
+          }
+          if (changed) {
+            chatList.innerHTML = "";
+            newChatList.forEach(({ friend, unread }) => {
+              if (typeof friend !== "string") return;
+              const chatDiv = document.createElement("div");
+              chatDiv.className = "chat";
+              chatDiv.setAttribute("data-username", friend);
+              // Username span
+              const nameSpan = document.createElement("span");
+              nameSpan.textContent = friend;
+              chatDiv.appendChild(nameSpan);
+              // Unread badge span
+              if (unread > 0) {
+                const badge = document.createElement("span");
+                badge.textContent = unread;
+                badge.style.background = "#f04747";
+                badge.style.color = "white";
+                badge.style.borderRadius = "12px";
+                badge.style.padding = "2px 8px";
+                badge.style.marginLeft = "8px";
+                badge.style.fontSize = "0.8em";
+                badge.style.fontWeight = "bold";
+                badge.className = "unreadBadge";
+                chatDiv.appendChild(badge);
+              }
+              chatDiv.onclick = (e) => {
+                manualChatSelection = true;
+                // Always use the username from data-username
+                loadMessages(chatDiv.getAttribute("data-username"));
+              };
+              chatList.appendChild(chatDiv);
+            });
+          }
+          // Only auto-select if requested and not after manual selection
+          if (autoSelect && !manualChatSelection && chats.length > 0) {
+            currentChatUser = chats[0];
+            loadMessages(chats[0]);
+          }
+        } catch (error) {
+          console.error("Error loading chats:", error);
+        }
+      }
+
+      // ===== Send message =====
+      async function sendMessage() {
+        const text = messageInput.value.trim();
+        if (!text || !currentChatUser) return;
+
+        await fetch("/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user1: currentUser,
+            user2: currentChatUser,
+            from: currentUser,
+            message: text,
+          }),
+        });
+
+        // Append locally immediately
+        const div = document.createElement("div");
+        div.textContent = text;
+        div.className = "myMessage";
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        messageInput.value = "";
+
+        // Update chat list if needed
+        addChat(currentChatUser);
+      }
+
+      // Focus management for better mobile UX
+      loginUsername.focus();
+
+      sendBtn.onclick = sendMessage;
+      messageInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") sendMessage();
+      });
+      loginPassword.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") loginBtn.click();
+      });
+      regPassword.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") registerBtn.click();
+      });
+      loginUsername.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          loginPassword.focus();
+        }
+      });
+      regUsername.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          regPassword.focus();
+        }
+      });
+
+      // ===== Load messages =====
+      async function loadMessages(friend) {
+        currentChatUser = friend;
+        localStorage.setItem("lastChatUser", friend);
+        document.getElementById("currentChatName").textContent = friend;
+        // Only switch to chatBox if not currently viewing chatList
+        if (isMobileView && mobilePanel !== "chatList") {
+          mobilePanel = "chatBox";
+          updateMobileLayout();
+        }
+        const res = await fetch(
+          `/messages?user1=${encodeURIComponent(currentUser)}&user2=${encodeURIComponent(friend)}`
+        );
+        const messages = await res.json();
+        // Notification logic: only notify for truly new messages
+        let lastNotified = Number(getLastNotified(friend));
+        let maxTimestamp = lastNotified;
+        messages.forEach((m) => {
+          if (m.from !== currentUser && m.timestamp > lastNotified) {
+            showNotification(`New message from ${friend}: ${m.message}`);
+            if (m.timestamp > maxTimestamp) maxTimestamp = m.timestamp;
+          }
+        });
+        setLastNotified(friend, maxTimestamp);
+        // Reload chat list to update unread badge
+        if (currentUser) loadMyChats(false);
+        if (JSON.stringify(messages) !== JSON.stringify(currentMessages)) {
+          currentMessages = messages;
+          chatBox.innerHTML = "";
+          messages.forEach((m) => {
+            const div = document.createElement("div");
+            div.className =
+              m.from === currentUser ? "myMessage" : "friendMessage";
+
+            // Show message text
+            const text = document.createElement("span");
+            text.textContent = m.message;
+            div.appendChild(text);
+
+            // Show timestamp
+            const time = document.createElement("span");
+            const date = new Date(m.timestamp);
+            time.textContent = date.toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+            time.style.fontSize = "0.7em";
+            time.style.color = "#888";
+            time.style.marginLeft = "8px";
+            div.appendChild(time);
+
+            chatBox.appendChild(div);
+          });
+
+          chatBox.scrollTop = chatBox.scrollHeight;
+        }
+        // Add scroll event listener to chatBox for marking as read
+        chatBox.onscroll = () => {
+          markChatRead(friend, messages);
+        };
+        // Also call once in case already at bottom
+        markChatRead(friend, messages);
+      }
+
+      // ===== Search users =====
+      const searchInput = document.getElementById("searchUser");
+      const searchResults = document.getElementById("searchResults");
+
+      searchInput.addEventListener("input", async () => {
+        const query = searchInput.value.trim();
+        searchResults.innerHTML = "";
+        if (!query) return;
+        const res = await fetch(`/search?q=${encodeURIComponent(query)}`);
+        const usersFound = await res.json();
+        let shown = new Set();
+        let count = 0;
+        usersFound.forEach((username) => {
+          if (username === currentUser) return;
+          if (shown.has(username)) return;
+          if (count >= 5) return;
+          shown.add(username);
+          count++;
+          const div = document.createElement("div");
+          div.textContent = username;
+          div.className = "searchResult";
+          div.onclick = () => {
+            manualChatSelection = true;
+            addChat(username);
+            searchResults.innerHTML = "";
+            searchInput.value = "";
+            loadMessages(username);
+          };
+          searchResults.appendChild(div);
+        });
+      });
+
+      // Click chat to switch
+      chatList.addEventListener("click", (e) => {
+        const chatDiv = e.target.closest(".chat");
+        if (chatDiv && chatDiv.classList.contains("chat")) {
+          const username = chatDiv.getAttribute("data-username");
+          if (username) loadMessages(username);
+        }
+      });
+
+      // ===== Polling every second =====
+      setInterval(async () => {
+        if (currentChatUser) {
+          const res = await fetch(
+            `/messages?user1=${encodeURIComponent(currentUser)}&user2=${encodeURIComponent(currentChatUser)}`
+          );
+          const messages = await res.json();
+          // Reload chat box if needed
+          if (JSON.stringify(messages) !== JSON.stringify(currentMessages)) {
+            currentMessages = messages;
+            chatBox.innerHTML = "";
+            messages.forEach((m) => {
+              const div = document.createElement("div");
+              div.className =
+                m.from === currentUser ? "myMessage" : "friendMessage";
+              const text = document.createElement("span");
+              text.textContent = m.message;
+              div.appendChild(text);
+              const time = document.createElement("span");
+              const date = new Date(m.timestamp);
+              time.textContent = date.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              });
+              time.style.fontSize = "0.7em";
+              time.style.color = "#888";
+              time.style.marginLeft = "8px";
+              div.appendChild(time);
+              chatBox.appendChild(div);
+            });
+            chatBox.scrollTop = chatBox.scrollHeight;
+          }
+          // Mark chat as read if at bottom
+          markChatRead(currentChatUser, messages);
+          // Reload chat list to update unread badge
+          if (currentUser) loadMyChats(false);
+        }
+        // Poll chat list for new chats, but don't auto-select
+        if (currentUser) loadMyChats(false);
+      }, 1000);
+
+      // ===== Window resize handler =====
+      window.addEventListener("resize", checkMobile);
+
+      // ===== Prevent zoom on input focus (mobile UX improvement) =====
+      document.addEventListener("DOMContentLoaded", function () {
+        const inputs = document.querySelectorAll(
+          'input[type="text"], input[type="password"]'
+        );
+        inputs.forEach((input) => {
+          input.addEventListener("focus", function () {
+            // Set font size to 16px to prevent zoom on iOS
+            this.style.fontSize = "16px";
+          });
+          input.addEventListener("blur", function () {
+            this.style.fontSize = "";
+          });
+        });
+      });
+
+      // Notification function
+      function showNotification(text) {
+        const notif = document.getElementById("notification");
+        notif.textContent = text;
+        notif.style.display = "block";
+        notif.style.opacity = "1";
+        setTimeout(() => {
+          notif.style.opacity = "0";
+          setTimeout(() => {
+            notif.style.display = "none";
+          }, 500);
+        }, 2500);
+      }
+
+      // Initialize mobile detection
+      checkMobile();
+    </script>
+  </body>
+</html>
