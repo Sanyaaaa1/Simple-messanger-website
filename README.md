@@ -47,6 +47,7 @@ npm start
 ```bash
 http://localhost:3000
 ```
+---
 
 ## ⚠️ Important Notes 
 
@@ -58,7 +59,7 @@ http://localhost:3000
 
 - Designed to illustrate core programming concepts:
 
--Frontend-backend communication via HTTP
+- Frontend-backend communication via HTTP
 
 - Asynchronous requests with fetch()
 
