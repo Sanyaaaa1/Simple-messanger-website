@@ -38,3 +38,21 @@ npm install`
 
 3. **Open it in your browser (! it is local !)**
 `http://localhost:3000`
+
+## ⚠️ Important Notes 
+
+- This project is for educational purposes and demonstration only.
+
+- Passwords are stored in plain text — for production, always use hashing (e.g., bcrypt) and HTTPS.
+
+- Chat updates are implemented using polling every second, not WebSockets.
+
+- Designed to illustrate core programming concepts:
+
+-- Frontend-backend communication via HTTP
+
+-- Asynchronous requests with fetch()
+
+-- File-based persistence
+
+-- Responsive UI design and DOM manipulation
