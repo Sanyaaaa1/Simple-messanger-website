@@ -49,10 +49,10 @@ npm install`
 
 - Designed to illustrate core programming concepts:
 
--- Frontend-backend communication via HTTP
+-     Frontend-backend communication via HTTP
 
--- Asynchronous requests with fetch()
+-     Asynchronous requests with fetch()
 
--- File-based persistence
+-     File-based persistence
 
--- Responsive UI design and DOM manipulation
+-     Responsive UI design and DOM manipulation
