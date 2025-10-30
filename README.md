@@ -30,17 +30,18 @@ It demonstrates key web development concepts, including user authentication, rea
 
 1. **Clone the repository and install dependencies:**
 
-`git clone https://github.com/<yourusername>/2kai.git
+```git clone https://github.com/<yourusername>/2kai.git
 cd 2kai
-npm install`
+npm install
+```
 
 2. **Start the server:**
 
-`npm start`
+```npm start```
 
 3. **Open it in your browser (! it is local !)**
 
-`http://localhost:3000`
+```http://localhost:3000```
 
 ## ⚠️ Important Notes 
 
